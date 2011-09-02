@@ -47,8 +47,8 @@ NSString *const kILGeoNamesErrorDomain = @"org.geonames";
 - (void)parseError:(NSError*)error;
 
 @property BOOL done;
-@property (nonatomic, retain) NSURLConnection *dataConnection;
-@property (nonatomic, retain) NSMutableData *dataBuffer;
+@property (nonatomic, strong) NSURLConnection *dataConnection;
+@property (nonatomic, strong) NSMutableData *dataBuffer;
 
 @end
 
@@ -72,9 +72,7 @@ NSString *const kILGeoNamesErrorDomain = @"org.geonames";
 }
 
 - (void)dealloc {
-	[userID release];
-	
-	[super dealloc];
+	userID = nil;
 }
 
 - (void)sendRequestWithURLString:(NSString*)urlString {
@@ -83,38 +81,37 @@ NSString *const kILGeoNamesErrorDomain = @"org.geonames";
 }
 
 - (void)threadedRequestWithURLString:(NSString*)urlString {
-    NSAutoreleasePool *downloadPool = [[NSAutoreleasePool alloc] init];
-	NSURLRequest	*request;
-	
-	// TODO - handle multiple outstanding requests
-	
-	@synchronized(self) {
-		done = NO;
-		self.dataBuffer = [NSMutableData data];
-		// Create the request
-		request = [NSURLRequest requestWithURL:[NSURL URLWithString:urlString]
-								   cachePolicy:NSURLRequestReloadIgnoringLocalCacheData
-							   timeoutInterval:60.0];
-		// Create the connection with the request and start loading the data
-		dataConnection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
+    @autoreleasepool {
+		NSURLRequest	*request;
+		
+		// TODO - handle multiple outstanding requests
+		
+		@synchronized(self) {
+			done = NO;
+			self.dataBuffer = [NSMutableData data];
+			// Create the request
+			request = [NSURLRequest requestWithURL:[NSURL URLWithString:urlString]
+									   cachePolicy:NSURLRequestReloadIgnoringLocalCacheData
+								   timeoutInterval:60.0];
+			// Create the connection with the request and start loading the data
+			dataConnection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
+		}
+		
+		// Just sit spinning in the run loop until all is done
+		if(self.dataConnection)
+		{
+			[self performSelectorOnMainThread:@selector(downloadStarted) withObject:nil waitUntilDone:NO];
+			while (!done) {
+				[[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate dateWithTimeIntervalSinceNow:5.0]];
+			}
+		}
+		
+		// Release resources used only in this thread.
+		@synchronized(self) {
+			self.dataBuffer = nil;
+			self.dataConnection = nil;
+		}
 	}
-	
-	// Just sit spinning in the run loop until all is done
-	if(self.dataConnection)
-	{
-		[self performSelectorOnMainThread:@selector(downloadStarted) withObject:nil waitUntilDone:NO];
-        while (!done) {
-            [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate dateWithTimeIntervalSinceNow:5.0]];
-        }
-	}
-	
-    // Release resources used only in this thread.
-	@synchronized(self) {
-		self.dataBuffer = nil;
-		self.dataConnection = nil;
-	}
-
-	[downloadPool release];
 }
 
 - (void)findNearbyPlaceNameForLatitude:(double)latitude longitude:(double)longitude {
@@ -160,7 +157,7 @@ NSString *const kILGeoNamesErrorDomain = @"org.geonames";
 - (void)downloadStarted
 {
     NSAssert2([NSThread isMainThread], @"%s at line %d called on secondary thread", __FUNCTION__, __LINE__);
-	
+	// EXC_BAD_ACCESS here?
     if (self.delegate != nil && [self.delegate respondsToSelector:@selector(geoNamesLookup:networkIsActive:)]) 
         [self.delegate geoNamesLookup:self networkIsActive:YES];
 }

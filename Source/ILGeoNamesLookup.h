@@ -70,7 +70,7 @@ extern NSString *const kILGeoNamesErrorDomain;
 }
 
 /** The delegate object you wish to receive the results. */
-@property (nonatomic, assign) id <ILGeoNamesLookupDelegate> delegate;
+@property (nonatomic, strong) id <ILGeoNamesLookupDelegate> delegate;
 
 /** Initialize a new instance with the user ID obtained from geonames.org 
  
