@@ -33,7 +33,7 @@
 
 /** The ILGeoNamesSearchController class creates a controller object that manages a table view with built-in support for searching for named locations from geonames.org.
  */
-@interface ILGeoNamesSearchController : UITableViewController <UISearchBarDelegate, UISearchDisplayDelegate, ILGeoNamesLookupDelegate>
+@interface ILGeoNamesSearchController : UIViewController <UITableViewDelegate, UITableViewDataSource, UISearchBarDelegate, UISearchDisplayDelegate, ILGeoNamesLookupDelegate>
 {
 @private
 	id <ILGeoNamesSearchControllerDelegate> delegate;
